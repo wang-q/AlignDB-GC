@@ -18,7 +18,6 @@ my %WriteMakefileArgs = (
   "NAME" => "AlignDB::GC",
   "PREREQ_PM" => {
     "AlignDB::IntSpan" => 0,
-    "AlignDB::Util" => 0,
     "List::Util" => 0,
     "Moose" => 0,
     "YAML" => 0
@@ -35,7 +34,6 @@ my %WriteMakefileArgs = (
 
 my %FallbackPrereqs = (
   "AlignDB::IntSpan" => 0,
-  "AlignDB::Util" => 0,
   "List::Util" => 0,
   "Moose" => 0,
   "Test::More" => "0.88",

@@ -104,7 +104,7 @@ sub segment_gc_stat {
 
     foreach my $sliding_set (@sliding_windows) {
         my @sliding_seqs = map { $sliding_set->substr_span($_) } @seqs;
-        my $sliding_gc = calc_gc_ratio(@sliding_seqs);
+        my $sliding_gc = _calc_gc_ratio(@sliding_seqs);
         push @sliding_gcs, $sliding_gc;
     }
 
