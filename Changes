@@ -1,5 +1,7 @@
 Revision history for AlignDB-GC
 
 {{$NEXT}}
+
+1.0.0  2016-01-15 16:41:31 CST
     - Switch to Dist::Milla
     - Move subs here from AlignDB::Util
