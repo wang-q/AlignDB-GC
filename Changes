@@ -1,0 +1,5 @@
+Revision history for AlignDB-GC
+
+{{$NEXT}}
+    - Switch to Dist::Milla
+    - Move subs here from AlignDB::Util
