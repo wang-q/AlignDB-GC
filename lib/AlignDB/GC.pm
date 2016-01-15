@@ -1,38 +1,19 @@
 package AlignDB::GC;
-
-# ABSTRACT: GC-related analysises
-
 use Moose;
-
 use List::Util qw(first max maxstr min minstr reduce shuffle sum);
 use YAML qw(Dump Load DumpFile LoadFile);
-
 use AlignDB::IntSpan;
-use AlignDB::Util qw(:all);
 
-# extreme sliding window size
-has 'wave_window_size' => ( is => 'rw', isa => 'Int', default => 100, );
+our $VERSION = '1.0.0';
 
-# extreme sliding window step
-has 'wave_window_step' => ( is => 'rw', isa => 'Int', default => 50, );
-
-# vicinal size
-has 'vicinal_size' => ( is => 'rw', isa => 'Int', default => 500, );
-
-# minimal fall range
-has 'fall_range' => ( is => 'rw', isa => 'Num', default => 0.1, );
-
-# gsw window size
-has 'gsw_size' => ( is => 'rw', isa => 'Int', default => 100, );
-
-# extreme sliding window size
-has 'stat_window_size' => ( is => 'rw', isa => 'Int', default => 100, );
-
-# extreme sliding window step
-has 'stat_window_step' => ( is => 'rw', isa => 'Int', default => 100, );
-
-# skip calc mdcw
-has 'skip_mdcw' => ( is => 'rw', isa => 'Bool', default => 0, );
+has 'wave_window_size' => ( is => 'rw', isa => 'Int',  default => 100, );
+has 'wave_window_step' => ( is => 'rw', isa => 'Int',  default => 50, );
+has 'vicinal_size'     => ( is => 'rw', isa => 'Int',  default => 500, );
+has 'fall_range'       => ( is => 'rw', isa => 'Num',  default => 0.1, );
+has 'gsw_size'         => ( is => 'rw', isa => 'Int',  default => 100, );
+has 'stat_window_size' => ( is => 'rw', isa => 'Int',  default => 100, );
+has 'stat_window_step' => ( is => 'rw', isa => 'Int',  default => 100, );
+has 'skip_mdcw'        => ( is => 'rw', isa => 'Bool', default => 0, );
 
 sub segment {
     my $self           = shift;
@@ -43,9 +24,7 @@ sub segment {
     # if not given $segment_size, do a whole alignment analysis
     my @segment_windows;
     if ($segment_size) {
-        @segment_windows
-            = $self->sliding_window( $comparable_set, $segment_size,
-            $segment_step );
+        @segment_windows = $self->sliding_window( $comparable_set, $segment_size, $segment_step );
     }
     else {
         push @segment_windows, $comparable_set;
@@ -67,14 +46,40 @@ sub sliding_window {
     while (1) {
         my $sliding_end = $sliding_start + $window_size - 1;
         last if $sliding_end > $comparable_number;
-        my $sliding_window
-            = $comparable_set->slice( $sliding_start, $sliding_end );
+        my $sliding_window = $comparable_set->slice( $sliding_start, $sliding_end );
         $sliding_start += $window_step;
 
         push @sliding_windows, $sliding_window;
     }
 
     return @sliding_windows;
+}
+
+sub _calc_gc_ratio {
+    my @seqs = @_;
+
+    my @ratios;
+    for my $seq (@seqs) {
+
+        # Count all four bases
+        my $a_count = $seq =~ tr/Aa/Aa/;
+        my $g_count = $seq =~ tr/Gg/Gg/;
+        my $c_count = $seq =~ tr/Cc/Cc/;
+        my $t_count = $seq =~ tr/Tt/Tt/;
+
+        my $four_count = $a_count + $g_count + $c_count + $t_count;
+        my $gc_count   = $g_count + $c_count;
+
+        if ( $four_count == 0 ) {
+            next;
+        }
+        else {
+            my $gc_ratio = $gc_count / $four_count;
+            push @ratios, $gc_ratio;
+        }
+    }
+
+    return _mean(@ratios);
 }
 
 sub segment_gc_stat {
@@ -94,8 +99,7 @@ sub segment_gc_stat {
 
     my @seqs = @{$seqs_ref};
 
-    my @sliding_windows
-        = $self->sliding_window( $segment_set, $window_size, $window_step );
+    my @sliding_windows = $self->sliding_window( $segment_set, $window_size, $window_step );
     my @sliding_gcs;
 
     foreach my $sliding_set (@sliding_windows) {
@@ -104,13 +108,13 @@ sub segment_gc_stat {
         push @sliding_gcs, $sliding_gc;
     }
 
-    my $gc_mean = mean(@sliding_gcs);
-    my $gc_std  = stddev(@sliding_gcs);
+    my $gc_mean = _mean(@sliding_gcs);
+    my $gc_std  = _stddev(@sliding_gcs);
     my $gc_cv
         = $gc_mean == 0 || $gc_mean == 1 ? undef
         : $gc_mean <= 0.5 ? $gc_std / $gc_mean
         :                   $gc_std / ( 1 - $gc_mean );
-    my $gc_mdcw = $self->skip_mdcw ? undef :_mdcw(@sliding_gcs);
+    my $gc_mdcw = $self->skip_mdcw ? undef : _mdcw(@sliding_gcs);
 
     return ( $gc_mean, $gc_std, $gc_cv, $gc_mdcw );
 }
@@ -150,8 +154,7 @@ sub segment_gc_stat_one {
 
     my $stat_segment_size = 500;
 
-    my $resize_set
-        = _center_resize( $segment_set, $comparable_set, $stat_segment_size );
+    my $resize_set = _center_resize( $segment_set, $comparable_set, $stat_segment_size );
     next unless $resize_set;
 
     my @segment_seqs = map { $segment_set->substr_span($_) } @{$seqs_ref};
@@ -159,10 +162,31 @@ sub segment_gc_stat_one {
     my $gc_mean = calc_gc_ratio(@segment_seqs);
     my ( $gc_std, $gc_mdcw ) = ( undef, undef );
 
-    my ( undef, undef, $gc_cv, undef )
-        = $self->segment_gc_stat( $seqs_ref, $resize_set, 100, 100 );
+    my ( undef, undef, $gc_cv, undef ) = $self->segment_gc_stat( $seqs_ref, $resize_set, 100, 100 );
 
     return ( $gc_mean, $gc_std, $gc_cv, $gc_mdcw );
+}
+
+sub _mean {
+    @_ = grep { defined $_ } @_;
+    return unless @_;
+    return $_[0] unless @_ > 1;
+    return sum(@_) / scalar(@_);
+}
+
+sub _variance {
+    @_ = grep { defined $_ } @_;
+    return   unless @_;
+    return 0 unless @_ > 1;
+    my $mean = _mean(@_);
+    return sum( map { ( $_ - $mean )**2 } @_ ) / $#_;
+}
+
+sub _stddev {
+    @_ = grep { defined $_ } @_;
+    return   unless @_;
+    return 0 unless @_ > 1;
+    return sqrt _variance(@_);
 }
 
 sub _mdcw {
@@ -179,7 +203,7 @@ sub _mdcw {
         push @dcws, abs $dcw;
     }
 
-    return mean(@dcws);
+    return _mean(@dcws);
 }
 
 # find local maxima, minima
@@ -473,7 +497,7 @@ sub gc_wave {
         my $sliding_window = $sliding_windows[$i];
 
         my @sw_seqs = map { $sliding_window->substr_span($_) } @seqs;
-        my $sw_gc = calc_gc_ratio(@sw_seqs);
+        my $sw_gc = _calc_gc_ratio(@sw_seqs);
 
         my $sw_length = $sliding_window->cardinality;
         my $sw_span   = scalar $sliding_window->spans;
@@ -504,3 +528,43 @@ sub gc_wave {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding UTF-8
+
+=head1 NAME
+
+AlignDB::GC - GC-related analysises
+
+=head1 ATTRIBUTES
+
+    extreme sliding window size
+    extreme sliding window step
+    vicinal size
+    minimal fall range
+    gsw window size
+    extreme sliding window size
+    extreme sliding window step
+    skip calc mdcw
+
+=head1 METHODS
+
+    segment
+    sliding_window
+    gc_wave
+
+=head1 AUTHOR
+
+Qiang Wang <wang-q@outlook.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2008 by Qiang Wang.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
