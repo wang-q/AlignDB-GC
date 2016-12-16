@@ -21,3 +21,4 @@ blib
 *.log
 *.bak
 *.swp
+/Build.bat
