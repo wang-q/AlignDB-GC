@@ -4,7 +4,7 @@ use List::Util qw(first max maxstr min minstr reduce shuffle sum);
 use YAML::Syck;
 use AlignDB::IntSpan;
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.1';
 
 has 'wave_window_size' => ( is => 'rw', isa => 'Int',  default => 100, );
 has 'wave_window_step' => ( is => 'rw', isa => 'Int',  default => 50, );
