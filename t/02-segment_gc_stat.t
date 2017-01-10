@@ -61,4 +61,35 @@ use AlignDB::GC;
 
 }
 
+{
+    print "#segment_gc_stat_one\n";
+
+    my $GC = AlignDB::GC->new;
+
+    my @data = (
+        [   [   [ "ATC" x 500, ],
+                AlignDB::IntSpan->new->add_pair( 1,    1500 ),
+                AlignDB::IntSpan->new->add_pair( 1000, 1100 ),
+            ],
+            [ 0.327, 0.016, ],
+        ],
+        [   [   [ "ATCCTTT" x 500, ],
+                AlignDB::IntSpan->new->add_pair( 1,    3500 ),
+                AlignDB::IntSpan->new->add_pair( 1000, 1100 ),
+            ],
+            [ 0.277, 0.029, ],
+        ],
+    );
+
+    for my $i ( 0 .. $#data ) {
+        my ( $input_ref, $except_ref ) = @{ $data[$i] };
+
+        my @results = grep {defined} $GC->segment_gc_stat_one( @{$input_ref}, );
+
+        #        $_ = $_->runlist for @results;
+        Test::Number::Delta::delta_ok( \@results, $except_ref, "segment_gc_stat_one $i" );
+    }
+
+}
+
 done_testing();
