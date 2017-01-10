@@ -1,6 +1,6 @@
 package AlignDB::GC;
 use Moose;
-use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+use List::Util;
 use YAML::Syck;
 use AlignDB::IntSpan;
 
@@ -34,12 +34,13 @@ sub segment {
 }
 
 sub sliding_window {
-    my $self           = shift;
-    my $comparable_set = shift;
-    my $window_size    = shift || $self->wave_window_size;
-    my $window_step    = shift || $self->wave_window_step;
+    my $self = shift;
+    my AlignDB::IntSpan $comparable_set = shift;
 
-    my $comparable_number = $comparable_set->cardinality;
+    my $window_size = shift || $self->wave_window_size;
+    my $window_step = shift || $self->wave_window_step;
+
+    my $comparable_number = $comparable_set->size;
 
     my @sliding_windows;
     my $sliding_start = 1;
@@ -83,13 +84,14 @@ sub _calc_gc_ratio {
 }
 
 sub segment_gc_stat {
-    my $self        = shift;
-    my $seqs_ref    = shift;
-    my $segment_set = shift;
+    my $self                         = shift;
+    my $seqs_ref                     = shift;
+    my AlignDB::IntSpan $segment_set = shift;
+
     my $window_size = shift || $self->stat_window_size;
     my $window_step = shift || $self->stat_window_step;
 
-    my $segment_number = $segment_set->cardinality;
+    my $segment_number = $segment_set->size;
 
     # There should be at least 2 sample, i.e., two sliding windows
     #   in the segment
@@ -120,9 +122,9 @@ sub segment_gc_stat {
 }
 
 sub _center_resize {
-    my $old_set    = shift;
-    my $parent_set = shift;
-    my $resize     = shift;
+    my AlignDB::IntSpan $old_set    = shift;
+    my AlignDB::IntSpan $parent_set = shift;
+    my $resize                      = shift;
 
     # find the middles of old_set
     my $half_size           = int( $old_set->size / 2 );
@@ -159,7 +161,7 @@ sub segment_gc_stat_one {
 
     my @segment_seqs = map { $segment_set->substr_span($_) } @{$seqs_ref};
 
-    my $gc_mean = calc_gc_ratio(@segment_seqs);
+    my $gc_mean = _calc_gc_ratio(@segment_seqs);
     my ( $gc_std, $gc_mdcw ) = ( undef, undef );
 
     my ( undef, undef, $gc_cv, undef ) = $self->segment_gc_stat( $seqs_ref, $resize_set, 100, 100 );
@@ -171,7 +173,7 @@ sub _mean {
     @_ = grep { defined $_ } @_;
     return unless @_;
     return $_[0] unless @_ > 1;
-    return sum(@_) / scalar(@_);
+    return List::Util::sum(@_) / scalar(@_);
 }
 
 sub _variance {
@@ -179,14 +181,14 @@ sub _variance {
     return   unless @_;
     return 0 unless @_ > 1;
     my $mean = _mean(@_);
-    return sum( map { ( $_ - $mean )**2 } @_ ) / $#_;
+    return List::Util::sum( map { ( $_ - $mean )**2 } @_ ) / $#_;
 }
 
 sub _stddev {
     @_ = grep { defined $_ } @_;
     return   unless @_;
     return 0 unless @_ > 1;
-    return sqrt _variance(@_);
+    return sqrt( _variance(@_) );
 }
 
 sub _mdcw {
@@ -200,7 +202,7 @@ sub _mdcw {
     my @dcws;
     for ( 1 .. $#array ) {
         my $dcw = $array[$_] - $array[ $_ - 1 ];
-        push @dcws, abs $dcw;
+        push @dcws, abs($dcw);
     }
 
     return _mean(@dcws);
@@ -235,10 +237,10 @@ sub find_extreme_step1 {
             $right_high = 0;
         }
         else {
-            if ( $windows->[$i]->{sw_gc} >= max(@right_vicinal_windows) ) {
+            if ( $windows->[$i]->{sw_gc} >= List::Util::max(@right_vicinal_windows) ) {
                 $right_low = 1;
             }
-            if ( $windows->[$i]->{sw_gc} <= min(@right_vicinal_windows) ) {
+            if ( $windows->[$i]->{sw_gc} <= List::Util::min(@right_vicinal_windows) ) {
                 $right_high = 1;
             }
         }
@@ -274,10 +276,10 @@ sub find_extreme_step1 {
             $left_high = 0;
         }
         else {
-            if ( $windows->[$i]->{sw_gc} >= max(@left_vicinal_windows) ) {
+            if ( $windows->[$i]->{sw_gc} >= List::Util::max(@left_vicinal_windows) ) {
                 $left_low = 1;
             }
-            if ( $windows->[$i]->{sw_gc} <= min(@left_vicinal_windows) ) {
+            if ( $windows->[$i]->{sw_gc} <= List::Util::min(@left_vicinal_windows) ) {
                 $left_high = 1;
             }
         }
@@ -411,8 +413,8 @@ REDO: while (1) {
             }
 
             if ( abs( $gc1 - $gc2 ) < $fall_range ) {
-                if (    max( $gc1, $gc2 ) < max( $gc, $gc3 )
-                    and min( $gc1, $gc2 ) > min( $gc, $gc3 ) )
+                if (    List::Util::max( $gc1, $gc2 ) < List::Util::max( $gc, $gc3 )
+                    and List::Util::min( $gc1, $gc2 ) > List::Util::min( $gc, $gc3 ) )
                 {
                     $windows->[ $extreme[ $i + 1 ] ]->{high_low_flag} = 'N';
                     $windows->[ $extreme[ $i + 2 ] ]->{high_low_flag} = 'N';
@@ -486,10 +488,6 @@ sub gc_wave {
 
     my @seqs = @{$seqs_ref};
 
-    my $comparable_number = $comparable_set->cardinality;
-
-    my $fall_range = $self->fall_range;
-
     my @sliding_windows = $self->sliding_window($comparable_set);
 
     my @sliding_attrs;
@@ -499,7 +497,7 @@ sub gc_wave {
         my @sw_seqs = map { $sliding_window->substr_span($_) } @seqs;
         my $sw_gc = _calc_gc_ratio(@sw_seqs);
 
-        my $sw_length = $sliding_window->cardinality;
+        my $sw_length = $sliding_window->size;
         my $sw_span   = scalar $sliding_window->spans;
         my $sw_indel  = $sw_span - 1;
 
