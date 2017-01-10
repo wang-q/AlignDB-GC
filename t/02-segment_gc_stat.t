@@ -28,7 +28,6 @@ use AlignDB::GC;
         $_ = $_->runlist for @results;
         is_deeply( \@results, $except_ref, "segment $i" );
     }
-
 }
 
 {
@@ -58,7 +57,6 @@ use AlignDB::GC;
         #        $_ = $_->runlist for @results;
         Test::Number::Delta::delta_ok( \@results, $except_ref, "segment_gc_stat $i" );
     }
-
 }
 
 {
@@ -89,7 +87,6 @@ use AlignDB::GC;
         #        $_ = $_->runlist for @results;
         Test::Number::Delta::delta_ok( \@results, $except_ref, "segment_gc_stat_one $i" );
     }
-
 }
 
 done_testing();
