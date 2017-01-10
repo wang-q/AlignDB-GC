@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/wang-q/AlignDB-GC.svg?branch=master)](https://travis-ci.org/wang-q/AlignDB-GC) [![Coverage Status](http://codecov.io/github/wang-q/AlignDB-GC/coverage.svg?branch=master)](https://codecov.io/github/wang-q/AlignDB-GC?branch=master) [![MetaCPAN Release](https://badge.fury.io/pl/AlignDB-GC.svg)](https://metacpan.org/release/AlignDB-GC)
 # NAME
 
 AlignDB::GC - GC-related analysises

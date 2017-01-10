@@ -1,1 +1,2 @@
 name = "AlignDB-GC"
+badges = ['travis', 'codecov', 'metacpan']

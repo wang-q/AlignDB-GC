@@ -46,12 +46,13 @@
             "List::Util" : "0",
             "Moose" : "0",
             "YAML::Syck" : "0",
-            "perl" : "5.008001"
+            "perl" : "5.010001"
          }
       },
       "test" : {
          "requires" : {
-            "Test::More" : "0.88"
+            "Test::More" : "0.88",
+            "Test::Number::Delta" : "1.06"
          }
       }
    },
