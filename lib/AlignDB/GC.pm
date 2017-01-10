@@ -93,8 +93,7 @@ sub segment_gc_stat {
 
     my $segment_number = $segment_set->size;
 
-    # There should be at least 2 sample, i.e., two sliding windows
-    #   in the segment
+    # There should be at least 2 sample, i.e., two sliding windows in the segment
     if ( $segment_number < $window_size + $window_step ) {
         return ( undef, undef, undef, undef );
     }

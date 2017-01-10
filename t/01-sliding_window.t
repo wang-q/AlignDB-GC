@@ -17,6 +17,7 @@ use AlignDB::GC;
     my @data = (
         [ [ AlignDB::IntSpan->new->add_pair( 1, 101 ), ], ["1-100"], ],
         [ [ AlignDB::IntSpan->new->add_pair( 1, 199 ), ], [ "1-100", "51-150", ], ],
+        [ [ AlignDB::IntSpan->new->add_pair( 1, 101 ), 10, 50 ], [ "1-10", "51-60", ], ],
     );
 
     for my $i ( 0 .. $#data ) {
